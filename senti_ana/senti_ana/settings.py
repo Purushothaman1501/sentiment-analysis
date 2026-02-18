@@ -11,16 +11,23 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import dj_database_url
+import os
+import dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+dotenv.load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s-mu_09(j6eg8x@k6s(#lo!s3_kk(^tqj6m6yv@hpm5_@b#5xu'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -73,13 +80,31 @@ WSGI_APPLICATION = 'senti_ana.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+from urllib.parse import urlsplit, urlunsplit
 
+# Prefer an explicit DATABASE_URL (set this to your Supabase Postgres URL),
+# otherwise fall back to SUPABASE_URL from the .env, and finally SQLite.
+raw_db_url = os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL') or SUPABASE_URL
+
+if raw_db_url:
+    # Strip any query parameters (some Supabase URLs include non-libpq options
+    # such as `pgbouncer` which cause psycopg2 to raise "invalid dsn" errors).
+    parts = urlsplit(raw_db_url)
+    cleaned = urlunsplit((parts.scheme, parts.netloc, parts.path, '', ''))
+    DATABASES = {
+        'default': dj_database_url.parse(
+            cleaned,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
