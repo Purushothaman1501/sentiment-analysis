@@ -14,6 +14,7 @@ from pathlib import Path
 import dj_database_url
 import os
 import dotenv
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,11 +45,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
+    # Local
     'senti_app',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',          # must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -93,11 +101,15 @@ if raw_db_url:
     parts = urlsplit(raw_db_url)
     cleaned = urlunsplit((parts.scheme, parts.netloc, parts.path, '', ''))
     DATABASES = {
-        'default': dj_database_url.parse(
-            cleaned,
-            conn_max_age=600,
-            ssl_require=True
-        )
+        'default': {
+            **dj_database_url.parse(cleaned, conn_max_age=600, ssl_require=True),
+            # Use a local SQLite DB when running `manage.py test`
+            # so we never try to CREATE/DROP the remote Supabase database.
+            'TEST': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': str(BASE_DIR / 'test_db.sqlite3'),
+            },
+        }
     }
 else:
     DATABASES = {
@@ -147,3 +159,37 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ─────────────────────────────────────────────
+#  Django REST Framework
+# ─────────────────────────────────────────────
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# ─────────────────────────────────────────────
+#  Simple JWT
+# ─────────────────────────────────────────────
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS':  True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+# ─────────────────────────────────────────────
+#  CORS
+# ─────────────────────────────────────────────
+# Allow all origins in development; restrict in production.
+CORS_ALLOW_ALL_ORIGINS = True   # set to False and use CORS_ALLOWED_ORIGINS in prod
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+# ]
