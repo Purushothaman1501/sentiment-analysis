@@ -14,4 +14,7 @@ urlpatterns = [
 
     # Protected: returns the current user's profile
     path("me/", views.me, name="auth-me"),
+
+    # Prediction endpoint
+    path("predict/", views.predict, name="predict"),
 ]

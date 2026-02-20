@@ -10,4 +10,7 @@ Pillow>=9.5.0
 supabase
 dj-database-url
 psycopg2-binary
+tensorflow
+numpy
+scikit-learn
 

@@ -9,6 +9,15 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
+import tensorflow as tf
+from keras.preprocessing.sequence import pad_sequences
+import numpy as np
+import pickle
+import os
+from django.conf import settings
+from .utils import get_model_artifacts
+from .models import SentimentAnalysis, UserProfile
+
 
 # ─────────────────────────────────────────────
 #  Helper: generate JWT token pair for a user
@@ -224,3 +233,70 @@ def me(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+# ─────────────────────────────────────────────
+#  Sentiment Prediction
+# ────────────────────────────────────────────
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def predict(request):
+    """
+    Predict sentiment of the provided text and store the result.
+    
+    Request body (JSON):
+        {
+            "text": "I love this product!"
+        }
+    """
+    text = request.data.get("text", "").strip()
+    MAX_LEN = 100  # Should match the maxlen used during model training
+    if not text:
+        return Response(
+            {"success": False, "message": "No text provided."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    model, tokenizer, classes = get_model_artifacts()
+    
+    if model is None or tokenizer is None:
+        return Response(
+            {"success": False, "message": "Sentiment model is not available."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    try:
+        # ── Preprocess ──────────────────────────────
+        sequences = tokenizer.texts_to_sequences([text])
+        padded = pad_sequences(sequences, maxlen=MAX_LEN, padding='post', truncating='post')
+        
+        # ── Predict ─────────────────────────────────
+        pred_probs = model.predict(padded)
+        pred_label_idx = np.argmax(pred_probs, axis=1)[0]
+        confidence = float(pred_probs[0][pred_label_idx])
+        predicted_class = str(classes[pred_label_idx])
+        
+        probs_dict = {str(c): float(p) for c, p in zip(classes, pred_probs[0])}
+
+        # ── Store in Database ────────────────────────
+        # UserProfile is created via signals on User creation.
+        user_profile = UserProfile.objects.get(user=request.user)
+        SentimentAnalysis.objects.create(
+            user_profile=user_profile,
+            text=text,
+            sentiment=predicted_class
+        )
+        
+        return Response({
+            "success": True,
+            "sentiment": predicted_class,
+            "confidence": confidence,
+            "probabilities": probs_dict
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {"success": False, "message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
