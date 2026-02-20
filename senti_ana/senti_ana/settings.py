@@ -189,7 +189,8 @@ SIMPLE_JWT = {
 # ─────────────────────────────────────────────
 # Allow all origins in development; restrict in production.
 CORS_ALLOW_ALL_ORIGINS = True   # set to False and use CORS_ALLOWED_ORIGINS in prod
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8080",
+]
