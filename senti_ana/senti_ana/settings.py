@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',          # must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -70,7 +71,9 @@ ROOT_URLCONF = 'senti_ana.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR.parent / 'sentianalyzer-main'],  # <-- Corrected path (contains index.html)
+
+        # 'DIRS': [FRONTEND_DIR] if 'FRONTEND_DIR' in locals() and os.path.exists(FRONTEND_DIR) else [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -154,6 +157,20 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# TEMPLATES = [
+#     {
+#         # ...existing code...
+#         'DIRS': [BASE_DIR / 'sentianalyzer-main'],  # <-- add this folder (contains index.html)
+#         # ...existing code...
+#     },
+# ]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Frontend build directory (for serving React as static files)
+FRONTEND_DIR = BASE_DIR.parent / 'frontend_dist'
+if os.path.exists(FRONTEND_DIR):
+    STATICFILES_DIRS = [FRONTEND_DIR]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
