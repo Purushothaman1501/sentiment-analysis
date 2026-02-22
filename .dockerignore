@@ -1,0 +1,10 @@
+node_modules
+venv
+.env
+db.sqlite3
+__pycache__
+*.pyc
+.git
+.gitignore
+sentianalyzer-main/dist
+sentianalyzer-main/node_modules
