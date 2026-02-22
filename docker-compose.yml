@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    volumes:
+      - ./senti_ana:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./senti_ana/.env
+    environment:
+      - DEBUG=True
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+ 
