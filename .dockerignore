@@ -1,8 +1,8 @@
 node_modules
 venv
-.\senti_ana\.env
+#.\senti_ana\.env
 .env
-db.sqlite3
+senti_ana\db.sqlite3
 __pycache__
 *.pyc
 .git
